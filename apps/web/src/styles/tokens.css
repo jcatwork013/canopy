@@ -1,0 +1,170 @@
+/* ===========================================================================
+ * Canopy Design Tokens
+ * Single source of truth for color, spacing, radius, elevation, typography.
+ * Mirrored in the RN theme object (see docs/DESIGN_SYSTEM.md) so web + mobile
+ * stay visually consistent. Light is default; dark via prefers-color-scheme.
+ * ========================================================================= */
+:root {
+  /* Tell the UA to render form controls / scrollbars in the right scheme so
+     native widgets (and autofilled text) never go white-on-white. */
+  color-scheme: light;
+
+  /* Brand — "Canopy" green, leaf & soil accents */
+  --color-brand-50: #f0fdf4;
+  --color-brand-100: #dcfce7;
+  --color-brand-200: #bbf7d0;
+  --color-brand-300: #86efac;
+  --color-brand-400: #4ade80;
+  --color-brand-500: #22c55e;
+  --color-brand-600: #16a34a; /* primary */
+  --color-brand-700: #15803d;
+  --color-brand-800: #166534;
+  --color-brand-900: #14532d;
+
+  --color-accent: #d97706; /* soil/amber for warnings & CTAs secondary */
+  --color-danger: #dc2626;
+  --color-warning: #f59e0b;
+  --color-success: #16a34a;
+  --color-info: #2563eb;
+
+  /* Semantic surfaces (light) */
+  --bg-base: #f7f9f6;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #eef2ec;
+  --bg-inverse: #0b1220;
+
+  --text-primary: #0f1b14;
+  --text-secondary: #4b5a51;
+  --text-tertiary: #7a8a80;
+  --text-on-brand: #ffffff;
+
+  --border-subtle: #e3e9e1;
+  --border-strong: #cfd8cb;
+
+  /* Form controls — explicit so typed text always contrasts its field. */
+  --bg-input: #ffffff;
+  --text-placeholder: #98a79e;
+  --focus-ring: 0 0 0 4px rgba(34, 197, 94, 0.18);
+
+  /* Brand gradient for hero badges & primary CTAs. */
+  --grad-brand: linear-gradient(135deg, #22c55e 0%, #16a34a 55%, #15803d 100%);
+  --grad-hero: radial-gradient(
+    120% 100% at 50% 0%,
+    rgba(34, 197, 94, 0.1) 0%,
+    rgba(34, 197, 94, 0) 60%
+  );
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(15, 27, 20, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 27, 20, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 27, 20, 0.12);
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 34px;
+
+  /* Layout — mobile-first; content column never exceeds a phone-ish width */
+  --app-max-width: 480px;
+  --bottom-nav-height: 64px;
+  --header-height: 56px;
+
+  /* Safe-area insets (notch / home indicator). Fallback 0 on non-iOS. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  --z-header: 40;
+  --z-nav: 50;
+  --z-modal: 100;
+  --z-toast: 200;
+}
+
+/* Dark palette. Applied two ways:
+ *   1. System default — when the OS is dark AND the user hasn't forced light.
+ *   2. Explicit choice — [data-theme='dark'] set by the theme toggle.
+ * The boot script in index.html sets data-theme before paint (no flash). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg-base: #0b1220;
+    --bg-surface: #121a2a;
+    --bg-elevated: #18233a;
+    --bg-subtle: #1c2740;
+    --bg-inverse: #f7f9f6;
+
+    --text-primary: #eef3ef;
+    --text-secondary: #b3c0b8;
+    --text-tertiary: #85958c;
+    --text-on-brand: #ffffff;
+
+    --border-subtle: #243049;
+    --border-strong: #324162;
+
+    --bg-input: #0f1726;
+    --text-placeholder: #6b7a72;
+    --focus-ring: 0 0 0 4px rgba(34, 197, 94, 0.28);
+    --grad-hero: radial-gradient(
+      120% 100% at 50% 0%,
+      rgba(34, 197, 94, 0.16) 0%,
+      rgba(34, 197, 94, 0) 60%
+    );
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-base: #0b1220;
+  --bg-surface: #121a2a;
+  --bg-elevated: #18233a;
+  --bg-subtle: #1c2740;
+  --bg-inverse: #f7f9f6;
+
+  --text-primary: #eef3ef;
+  --text-secondary: #b3c0b8;
+  --text-tertiary: #85958c;
+  --text-on-brand: #ffffff;
+
+  --border-subtle: #243049;
+  --border-strong: #324162;
+
+  --bg-input: #0f1726;
+  --text-placeholder: #6b7a72;
+  --focus-ring: 0 0 0 4px rgba(34, 197, 94, 0.28);
+  --grad-hero: radial-gradient(
+    120% 100% at 50% 0%,
+    rgba(34, 197, 94, 0.16) 0%,
+    rgba(34, 197, 94, 0) 60%
+  );
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+}

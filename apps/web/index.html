@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="mask-icon" href="/favicon.svg" color="#16a34a" />
+    <!-- Mobile-first, notch-aware, no user zoom for an app-like feel -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#16a34a" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Canopy" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- Apply the saved theme before first paint to avoid a flash. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('canopy-theme');
+          if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+      })();
+    </script>
+
+    <!-- ===== SEO ===== -->
+    <title>Canopy — Chăm cây cùng AI</title>
+    <meta
+      name="description"
+      content="Canopy giúp bạn nhận diện cây, chẩn đoán bệnh, lên lộ trình chữa trị và nhắc lịch chăm sóc bằng AI — ngay trên điện thoại."
+    />
+    <meta
+      name="keywords"
+      content="chăm sóc cây, nhận diện cây, chẩn đoán bệnh cây, AI nông nghiệp, làm vườn, Canopy"
+    />
+    <meta name="author" content="Canopy" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="application-name" content="Canopy" />
+    <!-- Update SITE_URL to your production origin so canonical & OG image are absolute. -->
+    <link rel="canonical" href="https://canopy.9bricks.com/" />
+
+    <!-- ===== Open Graph (Facebook, Zalo, Messenger, LinkedIn…) ===== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Canopy" />
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:url" content="https://canopy.9bricks.com/" />
+    <meta property="og:title" content="Canopy — Chăm cây cùng AI" />
+    <meta
+      property="og:description"
+      content="Nhận diện cây, chẩn đoán bệnh, lộ trình chữa trị và nhắc lịch chăm sóc bằng AI."
+    />
+    <meta property="og:image" content="https://canopy.9bricks.com/og-image.png" />
+    <meta property="og:image:secure_url" content="https://canopy.9bricks.com/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Canopy — Chăm cây cùng AI" />
+
+    <!-- ===== Twitter / X ===== -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Canopy — Chăm cây cùng AI" />
+    <meta
+      name="twitter:description"
+      content="Nhận diện cây, chẩn đoán bệnh, lộ trình chữa trị và nhắc lịch chăm sóc bằng AI."
+    />
+    <meta name="twitter:image" content="https://canopy.9bricks.com/og-image.png" />
+    <meta name="twitter:image:alt" content="Canopy — Chăm cây cùng AI" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

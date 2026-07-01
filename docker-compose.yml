@@ -1,0 +1,86 @@
+# Canopy local dev stack: Postgres + MinIO + Go API.
+# Quickstart:
+#   cp .env.example .env   (then set CONFIG_ENCRYPTION_KEY)
+#   docker compose up -d postgres minio createbuckets
+#   docker compose up api          # build + run the Go API with hot reload
+name: canopy
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: canopy-postgres
+    environment:
+      POSTGRES_USER: canopy
+      POSTGRES_PASSWORD: canopy
+      POSTGRES_DB: canopy
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U canopy -d canopy"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: canopy-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: canopyadmin
+      MINIO_ROOT_PASSWORD: canopyadmin
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"       # S3 API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"   # web console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot job that creates the bucket the API expects.
+  createbuckets:
+    image: minio/mc:latest
+    container_name: canopy-createbuckets
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 canopyadmin canopyadmin &&
+      mc mb --ignore-existing local/canopy &&
+      mc anonymous set none local/canopy &&
+      echo 'bucket canopy ready';
+      "
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+      target: dev
+    container_name: canopy-api
+    env_file: .env
+    environment:
+      # Override host-oriented values for in-network service discovery.
+      DATABASE_URL: postgres://canopy:canopy@postgres:5432/canopy?sslmode=disable
+      MINIO_ENDPOINT: minio:9000
+    # The app binds APP_PORT inside the container, so publish the same port on
+    # both sides (host APP_PORT -> container APP_PORT). Hardcoding :8080 here
+    # broke access whenever APP_PORT != 8080.
+    ports:
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/app
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  miniodata:

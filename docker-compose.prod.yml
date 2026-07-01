@@ -1,0 +1,112 @@
+# Canopy production stack for host 62.146.239.31 (shared host: edge = system nginx).
+#
+# This host already runs other sites behind the system nginx, which terminates
+# TLS and reverse-proxies each app on a 127.0.0.1 port. Canopy follows the SAME
+# pattern — it does NOT bind :80/:443 (that would break the other sites). nginx
+# vhosts in deploy/nginx/ proxy the three domains to the localhost ports below.
+#
+#   web  -> 127.0.0.1:13300   (canopy.9bricks.com + admin-canopy.9bricks.com)
+#   api  -> 127.0.0.1:18100   (api-canopy.9bricks.com)
+#
+# Usage:
+#   cp .env.production.example .env.production   # fill secrets
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+name: canopy-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-canopy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-canopy}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-canopy} -d ${POSTGRES_DB:-canopy}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?set in .env.production}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?set in .env.production}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  createbuckets:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} &&
+      mc mb --ignore-existing local/${MINIO_BUCKET:-canopy} &&
+      mc anonymous set none local/${MINIO_BUCKET:-canopy} &&
+      echo 'bucket ready';
+      "
+
+  migrate:
+    image: migrate/migrate:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./apps/api/migrations:/migrations:ro
+    command:
+      [
+        "-path", "/migrations",
+        "-database", "postgres://${POSTGRES_USER:-canopy}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-canopy}?sslmode=disable",
+        "up",
+      ]
+    restart: on-failure
+
+  api:
+    build:
+      context: ./apps/api
+      target: runtime
+      args:
+        VERSION: ${APP_VERSION:-prod}
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      APP_ENV: production
+      APP_PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-canopy}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-canopy}?sslmode=disable
+      MINIO_ENDPOINT: minio:9000
+      MINIO_USE_SSL: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-18100}:8080"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: serve
+      args:
+        VITE_API_BASE_URL: ${WEB_API_BASE_URL:-https://api-canopy.9bricks.com/api/v1}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-13300}:80"
+
+volumes:
+  pgdata:
+  miniodata:

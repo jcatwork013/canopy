@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Update to your production origin.
+Sitemap: https://canopy.app/sitemap.xml

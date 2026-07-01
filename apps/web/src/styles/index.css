@@ -1,0 +1,319 @@
+@import './tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Prevent overscroll bounce revealing browser chrome — app feel. */
+    overscroll-behavior-y: none;
+  }
+  /* Disable text selection on interactive chrome for an app-like feel. */
+  button,
+  .no-select {
+    user-select: none;
+  }
+
+  /* Chrome/Safari autofill repaints the field with its own colors, which on a
+     white surface left typed text near-invisible. Pin both the fill colour and
+     the inset "background" so autofilled credentials read like normal input. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text-primary);
+    caret-color: var(--text-primary);
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset;
+    box-shadow: 0 0 0 1000px var(--bg-input) inset;
+    /* Defeat the UA fade-to-yellow without flashing on focus. */
+    transition: background-color 9999s ease-in-out 0s;
+  }
+}
+
+@layer components {
+  /* The phone-width app frame, centered on larger screens. */
+  .app-frame {
+    width: 100%;
+    max-width: var(--app-max-width);
+    margin-inline: auto;
+    min-height: 100%;
+    background: var(--bg-base);
+    position: relative;
+  }
+
+  /* Main content padding: clears the mobile header + bottom nav on small
+     screens; on desktop the sidebar replaces those, so just breathe. */
+  .app-content {
+    padding-top: calc(var(--header-height) + var(--safe-top) + var(--space-4));
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-6));
+  }
+  @media (min-width: 1024px) {
+    .app-content {
+      padding-top: var(--space-8);
+      padding-bottom: var(--space-10);
+    }
+  }
+
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Text inputs — explicit colours so typed text always contrasts the field,
+     in light or dark, autofilled or not. Pair with .input-icon for a leading
+     adornment (icon sits in the reserved left padding). */
+  .input {
+    width: 100%;
+    height: 52px;
+    padding-inline: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    line-height: 1.5;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .input::placeholder {
+    color: var(--text-placeholder);
+    opacity: 1;
+  }
+  .input:hover {
+    border-color: var(--border-strong);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-brand-500);
+    box-shadow: var(--focus-ring);
+  }
+  .input-icon {
+    padding-left: 44px;
+  }
+  /* Trailing affordance (e.g. show/hide password) reserves right padding. */
+  .input-trailing {
+    padding-right: 44px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    height: 48px;
+    padding-inline: var(--space-5);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: var(--text-base);
+    transition: transform 0.08s ease, opacity 0.15s ease, background 0.15s ease;
+  }
+  .btn:active {
+    transform: scale(0.97);
+  }
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+  .btn-primary {
+    background-image: var(--grad-brand);
+    color: var(--text-on-brand);
+    box-shadow: 0 1px 2px rgba(15, 27, 20, 0.1), 0 10px 24px rgba(22, 163, 74, 0.28);
+  }
+  .btn-primary:hover {
+    filter: saturate(1.08) brightness(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.55;
+    box-shadow: none;
+  }
+  .btn-ghost {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+  }
+  .btn-ghost:hover {
+    background: var(--border-subtle);
+  }
+
+  /* Large touch targets — min 44px per Apple/Material guidance. */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* ---- Premium accents ---- */
+  .text-gradient {
+    background-image: linear-gradient(115deg, #166534 0%, #16a34a 55%, #15803d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* Lighter variant for dark backgrounds. */
+  .text-gradient-light {
+    background-image: linear-gradient(115deg, #86efac 0%, #4ade80 50%, #22c55e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* Layered radial mesh for hero / section backdrops. */
+  .hero-mesh {
+    background-image:
+      radial-gradient(42% 55% at 12% 8%, rgba(34, 197, 94, 0.2), transparent 70%),
+      radial-gradient(36% 46% at 88% 12%, rgba(217, 119, 6, 0.14), transparent 70%),
+      radial-gradient(46% 55% at 75% 95%, rgba(34, 197, 94, 0.14), transparent 70%);
+  }
+  /* Gradient hairline ring on cards (set behind content via padding). */
+  .ring-grad {
+    position: relative;
+  }
+  .ring-grad::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(140deg, rgba(34, 197, 94, 0.5), rgba(34, 197, 94, 0) 45%);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .lift {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+  .icon-tile {
+    background-image: var(--grad-brand);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(22, 163, 74, 0.3);
+  }
+
+  /* ---- Entrance & ambient animations ---- */
+  .anim-fade-up {
+    animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .anim-fade {
+    animation: fade-in 0.7s ease both;
+  }
+  .anim-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .anim-blob {
+    animation: blob 14s ease-in-out infinite;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes blob {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(14px, -18px) scale(1.08);
+  }
+  66% {
+    transform: translate(-12px, 10px) scale(0.96);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-up,
+  .anim-fade,
+  .anim-float,
+  .anim-blob {
+    animation: none;
+  }
+
+  /* Scan effect — a brand light sweeping over the captured image. */
+  .scan-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--color-brand-400),
+      transparent
+    );
+    box-shadow: 0 0 16px 3px rgba(34, 197, 94, 0.55);
+    animation: scan-sweep 1.8s ease-in-out infinite alternate;
+  }
+  .scan-grid {
+    background-image:
+      linear-gradient(rgba(34, 197, 94, 0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34, 197, 94, 0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+    animation: scan-pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes scan-sweep {
+  0% {
+    top: 4%;
+  }
+  100% {
+    top: 96%;
+  }
+}
+@keyframes scan-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scan-line,
+  .scan-grid {
+    animation: none;
+  }
+}

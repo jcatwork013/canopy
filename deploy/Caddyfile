@@ -1,0 +1,30 @@
+# Canopy edge reverse proxy — automatic HTTPS (Let's Encrypt).
+# DNS A records (already pointed by ops):
+#   canopy.9bricks.com        -> 62.146.239.31
+#   admin-canopy.9bricks.com  -> 62.146.239.31
+#   api-canopy.9bricks.com    -> 62.146.239.31
+#
+# Requires inbound 80 + 443 open on the host. Set ACME_EMAIL in .env.production.
+
+{
+	email {$ACME_EMAIL}
+}
+
+# --- API ---
+api-canopy.9bricks.com {
+	encode gzip zstd
+	reverse_proxy api:8080
+}
+
+# --- Web PWA (player/seller/caretaker) ---
+canopy.9bricks.com {
+	reverse_proxy web:80
+}
+
+# --- Admin portal ---
+# Phase 1: the admin UI is part of the same SPA (the readiness/setup gate +
+# /admin routes). Pointing this host at the web container is enough; when the
+# admin app is split out (apps/admin), repoint this to `admin:80`.
+admin-canopy.9bricks.com {
+	reverse_proxy web:80
+}

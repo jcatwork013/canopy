@@ -1,0 +1,15 @@
+# Internal static file server for the web container (no TLS; the edge Caddy
+# terminates HTTPS). SPA fallback so client-side routes resolve to index.html.
+:80 {
+	root * /srv
+	encode gzip zstd
+	try_files {path} /index.html
+	file_server
+
+	# Long-cache hashed assets; the service worker handles app-shell updates.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	# Never cache the SW or index so updates roll out promptly.
+	@noStore path /sw.js /index.html /manifest.webmanifest
+	header @noStore Cache-Control "no-cache"
+}

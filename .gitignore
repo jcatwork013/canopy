@@ -1,0 +1,29 @@
+# Env / secrets
+.env
+.env.local
+*.local
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+.expo/
+
+# Go
+apps/api/bin/
+apps/api/tmp/
+*.test
+coverage.out
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Docker volumes (if mounted locally)
+.data/
+
+# Production env (never commit)
+.env.production
