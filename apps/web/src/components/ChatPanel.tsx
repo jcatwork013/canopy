@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '@canopy/shared';
-import { AlertTriangle, ArrowRight, Check, ImagePlus, Sparkles, X } from '@/components/icons';
+import { AlertTriangle, ArrowRight, Check, Copy, ImagePlus, Sparkles, X } from '@/components/icons';
 import { Button, cn } from '@/components/ui';
 import { Markdown } from '@/components/Markdown';
 import { api } from '@/lib/api';
 import { fileToResizedBase64 } from '@/lib/image';
 
 type Health = 'ok' | 'warning' | 'disease' | 'none';
-type Msg = { role: 'user' | 'assistant'; content: string; image?: string; health?: Health };
+type Msg = { role: 'user' | 'assistant'; content: string; image?: string; health?: Health; at?: number };
 
 const AI_NAME = 'SynapX Pro AI';
 
@@ -33,6 +33,9 @@ const HEALTH_BADGE: Record<Exclude<Health, 'none'>, { label: string; cls: string
   },
 };
 
+const fmtTime = (at?: number) =>
+  at ? new Date(at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
+
 /**
  * Chat with the AI about a plant/situation. The user can attach NEW images at
  * any point in the conversation (follow-up photos), which the AI analyses.
@@ -45,6 +48,7 @@ export function ChatPanel({
   plantName,
   seedQuestions = [],
   intro = `Hỏi ${AI_NAME} về tình trạng cây, cách chữa trị và chăm sóc.`,
+  heightClass = 'max-h-96',
 }: {
   storageKey: string;
   imageBase64?: string;
@@ -53,6 +57,8 @@ export function ChatPanel({
   plantName?: string;
   seedQuestions?: string[];
   intro?: string;
+  /** Scroll region height (Tailwind class). Larger for full-screen chat. */
+  heightClass?: string;
 }) {
   // Persistent context so an attached photo reads as "the plant we're discussing"
   // rather than a bare, ambiguous image.
@@ -68,6 +74,7 @@ export function ChatPanel({
   const [input, setInput] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState<number | null>(null);
   const [attach, setAttach] = useState<{ base64: string; mime: string; dataUrl: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -91,18 +98,28 @@ export function ChatPanel({
     }
   };
 
+  const copy = async (text: string, i: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(i);
+      setTimeout(() => setCopied((c) => (c === i ? null : c)), 1500);
+    } catch {
+      /* clipboard blocked */
+    }
+  };
+
   const send = async (text: string) => {
     const q = text.trim();
     if ((!q && !attach) || pending) return;
 
     // Image to send this turn: the explicit attachment, else the seed (scan) image once.
     let img: { base64: string; mime: string } | null = attach;
-    let display = attach?.dataUrl;
+    const display = attach?.dataUrl;
     if (!img && imageBase64 && !seedImageUsed.current) {
       img = { base64: imageBase64, mime: mimeType || 'image/jpeg' };
     }
 
-    const userMsg: Msg = { role: 'user', content: q || '(đã gửi ảnh)', image: display };
+    const userMsg: Msg = { role: 'user', content: q || '(đã gửi ảnh)', image: display, at: Date.now() };
     const next: Msg[] = [...messages, userMsg];
     setMessages(next);
     setInput('');
@@ -116,7 +133,7 @@ export function ChatPanel({
       });
       if (imageBase64 && img?.base64 === imageBase64) seedImageUsed.current = true;
       const { health, content } = parseReply(res.reply);
-      setMessages([...next, { role: 'assistant', content, health }]);
+      setMessages([...next, { role: 'assistant', content, health, at: Date.now() }]);
     } catch (e) {
       setMessages(messages); // roll back on failure
       setError(e instanceof ApiError ? e.message : 'Không gửi được, thử lại.');
@@ -125,20 +142,34 @@ export function ChatPanel({
     }
   };
 
+  const showSuggestions = seedQuestions.length > 0 && messages.length === 0;
+
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface">
-      <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
-        <span className="icon-tile flex h-8 w-8 items-center justify-center rounded-lg">
-          <Sparkles className="h-4 w-4" />
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
+      {/* Header — brand gradient with a live status dot. */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 text-white"
+        style={{ backgroundImage: 'var(--grad-brand)' }}
+      >
+        <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
+          <Sparkles className="h-5 w-5" />
         </span>
-        <div>
-          <p className="text-sm font-semibold leading-none">{AI_NAME}</p>
-          <p className="mt-0.5 text-xs text-content-tertiary">Gửi thêm ảnh bất cứ lúc nào</p>
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-sm font-semibold leading-none">
+            {AI_NAME}
+          </p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-white/80">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/70" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            </span>
+            Trực tuyến · gửi ảnh bất cứ lúc nào
+          </p>
         </div>
         {messages.length > 0 && (
           <button
             onClick={() => setMessages([])}
-            className="ml-auto text-xs text-content-tertiary hover:text-danger"
+            className="ml-auto rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-white/25"
           >
             Xoá
           </button>
@@ -157,56 +188,85 @@ export function ChatPanel({
         </div>
       )}
 
-      <div ref={scrollRef} className="max-h-96 space-y-3 overflow-y-auto px-4 py-4">
+      <div ref={scrollRef} className={cn('space-y-3 overflow-y-auto px-4 py-4', heightClass)}>
         {messages.length === 0 && (
-          <div className="space-y-3">
-            <p className="text-sm text-content-secondary">{intro}</p>
-            {seedQuestions.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {seedQuestions.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => send(s)}
-                    className="rounded-full border border-border-subtle px-3 py-1 text-xs text-content-secondary transition-colors hover:border-brand-400 hover:text-brand-700"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="flex flex-col items-center gap-2 py-4 text-center">
+            <span className="icon-tile flex h-12 w-12 items-center justify-center rounded-2xl">
+              <Sparkles className="h-6 w-6" />
+            </span>
+            <p className="max-w-xs text-sm text-content-secondary">{intro}</p>
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
-            <div
-              className={cn(
-                'max-w-[85%] space-y-2 rounded-2xl px-3.5 py-2 text-sm leading-relaxed',
-                m.role === 'user' ? 'bg-brand-600 text-white' : 'bg-subtle text-content',
-              )}
-            >
-              {m.image && (
-                <img src={m.image} alt="" className="max-h-44 w-full rounded-lg object-cover" />
-              )}
-              {m.role === 'assistant' && m.health && m.health !== 'none' && (
-                <HealthBadge health={m.health} />
-              )}
-              {m.role === 'assistant' ? (
-                <Markdown text={m.content} />
-              ) : (
-                <p className="whitespace-pre-wrap">{m.content}</p>
-              )}
+          <div key={i} className={cn('group flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
+            <div className={cn('flex max-w-[86%] flex-col gap-1', m.role === 'user' ? 'items-end' : 'items-start')}>
+              <div
+                className={cn(
+                  'space-y-2 rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm',
+                  m.role === 'user'
+                    ? 'rounded-br-md bg-brand-600 text-white'
+                    : 'rounded-bl-md border border-border-subtle bg-surface text-content',
+                )}
+              >
+                {m.image && (
+                  <img src={m.image} alt="" className="max-h-44 w-full rounded-lg object-cover" />
+                )}
+                {m.role === 'assistant' && m.health && m.health !== 'none' && (
+                  <HealthBadge health={m.health} />
+                )}
+                {m.role === 'assistant' ? (
+                  <Markdown text={m.content} />
+                ) : (
+                  <p className="whitespace-pre-wrap">{m.content}</p>
+                )}
+              </div>
+              <div
+                className={cn(
+                  'flex items-center gap-2 px-1 text-[10px] text-content-tertiary',
+                  m.role === 'user' ? 'flex-row-reverse' : 'flex-row',
+                )}
+              >
+                {m.at && <span>{fmtTime(m.at)}</span>}
+                {m.role === 'assistant' && (
+                  <button
+                    onClick={() => copy(m.content, i)}
+                    className="flex items-center gap-1 opacity-0 transition-opacity hover:text-content-secondary group-hover:opacity-100"
+                    aria-label="Sao chép"
+                  >
+                    {copied === i ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    {copied === i ? 'Đã chép' : 'Chép'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
         {pending && (
           <div className="flex justify-start">
-            <div className="rounded-2xl bg-subtle px-3.5 py-2 text-sm text-content-tertiary">
-              {AI_NAME} đang phân tích…
+            <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-border-subtle bg-surface px-4 py-3 shadow-sm">
+              <span className="dot-typing" />
+              <span className="dot-typing" style={{ animationDelay: '0.15s' }} />
+              <span className="dot-typing" style={{ animationDelay: '0.3s' }} />
             </div>
           </div>
         )}
         {error && <p className="text-sm text-danger">{error}</p>}
       </div>
+
+      {/* Persistent suggestion chips (before the conversation starts). */}
+      {showSuggestions && (
+        <div className="flex gap-2 overflow-x-auto border-t border-border-subtle px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {seedQuestions.map((s) => (
+            <button
+              key={s}
+              onClick={() => send(s)}
+              className="shrink-0 whitespace-nowrap rounded-full border border-border-subtle bg-subtle/60 px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* attachment preview */}
       {attach && (
@@ -243,7 +303,7 @@ export function ChatPanel({
           type="button"
           onClick={() => fileRef.current?.click()}
           aria-label="Đính ảnh"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-content-secondary hover:bg-subtle hover:text-content"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-content-secondary transition-colors hover:bg-subtle hover:text-content"
         >
           <ImagePlus className="h-5 w-5" />
         </button>

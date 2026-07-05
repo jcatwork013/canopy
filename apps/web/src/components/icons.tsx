@@ -19,6 +19,26 @@ export const Leaf = (p: IconProps) => (
   </svg>
 );
 
+export const Copy = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+export const Filter = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M3 5h18l-7 8v6l-4-2v-4Z" />
+  </svg>
+);
+
+export const ArrowLeft = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M19 12H5" />
+    <path d="m12 19-7-7 7-7" />
+  </svg>
+);
+
 export const Store = (p: IconProps) => (
   <svg {...base} {...p}>
     <path d="M4 9.5 5.2 4.5A1 1 0 0 1 6.2 4h11.6a1 1 0 0 1 1 .8L20 9.5" />

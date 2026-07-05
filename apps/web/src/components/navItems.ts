@@ -1,5 +1,5 @@
 import type { ComponentType, SVGProps } from 'react';
-import { BookOpen, Home, Leaf, Scan, Sprout, User, Users } from '@/components/icons';
+import { BookOpen, Home, Leaf, Scan, Search, Sprout, User, Users } from '@/components/icons';
 
 export interface NavItem {
   to: string;
@@ -14,6 +14,7 @@ export interface NavItem {
 /** Primary app navigation — shared by the mobile tab bar and desktop sidebar. */
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Trang chủ', icon: Home, end: true },
+  { to: '/search', label: 'Tra cứu', icon: Search },
   { to: '/plants', label: 'Khu vườn', icon: Sprout },
   { to: '/scan', label: 'Trợ lý chăm sóc cây', icon: Scan, primary: true },
   { to: '/care', label: 'Chăm sóc', icon: Leaf },

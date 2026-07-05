@@ -67,6 +67,22 @@ export function LeafMark(p: Props) {
   );
 }
 
+/** Compact leafy mark used as a graceful fallback behind plant photos.
+ *  Mostly white/translucent so it reads on any coloured gradient tile. */
+export function PlantMark(p: Props) {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" {...p}>
+      <g stroke="#ffffff" strokeOpacity="0.9" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M32 52V30" />
+        <path d="M32 36c0-11-7-18-19-19 0 11 7 18 19 19Z" fill="#ffffff" fillOpacity="0.35" />
+        <path d="M32 32c0-12 8-19 21-20 0 12-8 19-21 20Z" fill="#ffffff" fillOpacity="0.55" />
+        <path d="M32 44c-1-8 3-15 11-19" strokeOpacity="0.6" />
+      </g>
+      <path d="M22 50h20l-3 8a3 3 0 0 1-3 2H28a3 3 0 0 1-3-2l-3-8Z" fill="#ffffff" fillOpacity="0.85" />
+    </svg>
+  );
+}
+
 /** Empty garden — seedling in soil, for empty states. */
 export function EmptyPlant(p: Props) {
   return (

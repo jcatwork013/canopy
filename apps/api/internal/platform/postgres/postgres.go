@@ -8,9 +8,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Connect builds and verifies a pgxpool. A failed initial ping is returned as an
-// error; callers decide whether that is fatal (Phase 0 treats it as non-fatal so
-// the readiness gate can report it instead of crash-looping).
+// Connect builds a pgxpool and tries to verify it with a bounded retry.
+//
+// The initial ping is retried with backoff because on a host reboot Postgres and
+// the API restart in parallel and Docker's depends_on ordering no longer applies,
+// so the DB is frequently unreachable for the first few seconds.
+//
+// If the DB is still unreachable after the retry window, Connect returns the LIVE
+// (non-nil) pool together with the last ping error, NOT a nil pool. pgxpool
+// reconnects lazily, so returning the pool lets the app degrade gracefully — the
+// readiness gate reports "database unreachable" and self-heals once Postgres is up
+// — instead of nil-panicking on every DB-backed request until a manual restart.
 func Connect(ctx context.Context, url string, maxConns, minConns int32) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(url)
 	if err != nil {
@@ -31,11 +39,21 @@ func Connect(ctx context.Context, url string, maxConns, minConns int32) (*pgxpoo
 		return nil, err
 	}
 
-	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	if err := pool.Ping(pingCtx); err != nil {
-		pool.Close()
-		return nil, err
+	const attempts = 15 // ~30s total: enough to outlast a slow DB start at boot.
+	var pingErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		pingErr = pool.Ping(pingCtx)
+		cancel()
+		if pingErr == nil {
+			return pool, nil
+		}
+		select {
+		case <-ctx.Done():
+			return pool, ctx.Err()
+		case <-time.After(2 * time.Second):
+		}
 	}
-	return pool, nil
+	// Still unreachable: hand back the live pool so callers self-heal.
+	return pool, pingErr
 }

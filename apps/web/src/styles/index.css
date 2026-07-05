@@ -208,6 +208,15 @@
     box-shadow: 0 6px 16px rgba(22, 163, 74, 0.3);
   }
 
+  /* Chat "assistant is typing" bouncing dots. */
+  .dot-typing {
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: var(--color-brand-500);
+    animation: dot-bounce 1s ease-in-out infinite;
+  }
+
   /* ---- Entrance & ambient animations ---- */
   .anim-fade-up {
     animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -262,11 +271,24 @@
     transform: translate(-12px, 10px) scale(0.96);
   }
 }
+@keyframes dot-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .anim-fade-up,
   .anim-fade,
   .anim-float,
-  .anim-blob {
+  .anim-blob,
+  .dot-typing {
     animation: none;
   }
 

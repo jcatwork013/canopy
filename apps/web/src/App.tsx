@@ -13,6 +13,7 @@ import { VerifyEmailScreen } from '@/screens/VerifyEmailScreen';
 import { ForgotPasswordScreen } from '@/screens/ForgotPasswordScreen';
 import { ResetPasswordScreen } from '@/screens/ResetPasswordScreen';
 import { PlantsScreen } from '@/screens/PlantsScreen';
+import { SearchScreen } from '@/screens/SearchScreen';
 import { ScanScreen } from '@/screens/ScanScreen';
 import { CareScreen } from '@/screens/CareScreen';
 import { KycScreen } from '@/screens/KycScreen';
@@ -72,6 +73,7 @@ const router = createBrowserRouter([
       {
         element: <ContentLayout />,
         children: [
+          { path: '/search', element: <SearchScreen /> },
           { path: '/community', element: <CommunityScreen /> },
           { path: '/community/service/:id', element: <ServiceDetailScreen /> },
           { path: '/community/:id', element: <ListingDetailScreen /> },

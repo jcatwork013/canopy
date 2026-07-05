@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Bell, Scan, Sparkles, Sprout, Users } from '@/components/icons';
+import { ArrowRight, Bell, Leaf, Scan, Search, Sparkles, Sprout, Users } from '@/components/icons';
 import { HeroShowcase } from '@/components/HeroShowcase';
+import { PLANTS } from '@/features/search/plantCatalog';
 
 const FEATURES = [
   {
@@ -31,84 +32,139 @@ const STEPS = [
   { n: '03', title: 'Chăm đúng cách', desc: 'Nhận lộ trình chăm sóc và nhắc lịch tự động.' },
 ];
 
+const STATS = [
+  { value: `${PLANTS.length}+`, label: 'Loài cây tra cứu' },
+  { value: '~3 giây', label: 'Nhận diện bằng AI' },
+  { value: '24/7', label: 'Trợ lý chăm cây' },
+];
+
+// A few well-known plants to seed the search band.
+const POPULAR = PLANTS.slice(0, 6);
+
+/** Consistent section eyebrow + heading. */
+function SectionHead({ eyebrow, title, sub }: { eyebrow: string; title: React.ReactNode; sub?: string }) {
+  return (
+    <div className="mx-auto max-w-xl text-center">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+        <Sparkles className="h-3.5 w-3.5" />
+        {eyebrow}
+      </span>
+      <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">{title}</h2>
+      {sub && <p className="mt-3 text-content-secondary">{sub}</p>}
+    </div>
+  );
+}
+
 export function LandingScreen() {
   return (
     <div className="overflow-hidden">
       <HeroShowcase />
 
-      {/* Features + How it works — dark, dramatic band */}
-      <section className="relative isolate overflow-hidden bg-[#08120c] text-white">
-        {/* ambient glows + grid texture */}
-        <span className="anim-blob pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full bg-brand-500/20 blur-[100px]" />
-        <span className="anim-blob pointer-events-none absolute -right-16 bottom-0 h-80 w-80 rounded-full bg-emerald-400/15 blur-[110px]" style={{ animationDelay: '4s' }} />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,.6) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.6) 1px,transparent 1px)',
-            backgroundSize: '44px 44px',
-          }}
-        />
+      {/* ── Stats strip — brand band bridging hero and content ────────────── */}
+      <section className="border-b border-border-subtle bg-brand-600 text-white">
+        <div className="mx-auto grid max-w-4xl grid-cols-3 divide-x divide-white/15 px-4 py-6 sm:px-6 lg:py-8">
+          {STATS.map((s) => (
+            <div key={s.label} className="px-2 text-center">
+              <p className="text-2xl font-extrabold sm:text-3xl">{s.value}</p>
+              <p className="mt-1 text-xs text-brand-50 sm:text-sm">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-        <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-          <div className="mx-auto max-w-xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-brand-300 backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5" />
-              Tính năng
+      {/* ── Search band — base background, surfaces the plant library ─────── */}
+      <section className="bg-base">
+        <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:py-24">
+          <SectionHead
+            eyebrow="Thư viện cây"
+            title={<>Tra cứu <span className="text-gradient">mọi loài cây</span></>}
+            sub="Tìm theo tên, đặc điểm hay nhu cầu chăm sóc — kèm hồ sơ chi tiết và hỏi đáp cùng AI."
+          />
+
+          <Link
+            to="/search"
+            className="mx-auto mt-8 flex max-w-2xl items-center gap-3 rounded-2xl border border-border-subtle bg-surface p-2 pl-5 shadow-md transition-shadow hover:shadow-lg"
+          >
+            <Search className="h-5 w-5 shrink-0 text-content-tertiary" />
+            <span className="flex-1 text-content-tertiary">Trầu bà, lưỡi hổ, cây lọc không khí…</span>
+            <span className="btn btn-primary h-11 shrink-0 px-5 text-sm">
+              Tìm cây
             </span>
-            <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Mọi thứ để chăm cây <span className="text-gradient-light">tốt hơn</span>
-            </h2>
-            <p className="mt-3 text-white/55">Bộ công cụ AI giúp bạn hiểu và chăm sóc từng chiếc lá.</p>
-          </div>
+          </Link>
 
-          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map((f, idx) => {
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {POPULAR.map((p) => (
+              <Link
+                key={p.id}
+                to="/search"
+                className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface py-1 pl-1 pr-3.5 text-sm font-medium text-content-secondary transition-colors hover:border-brand-400 hover:text-brand-700"
+              >
+                <img
+                  src={`/plants/${p.id}.jpg`}
+                  alt=""
+                  loading="lazy"
+                  className="h-7 w-7 rounded-full object-cover"
+                />
+                {p.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Features — surface (white) background, clean light cards ──────── */}
+      <section className="border-y border-border-subtle bg-surface">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+          <SectionHead
+            eyebrow="Tính năng"
+            title={<>Mọi thứ để chăm cây <span className="text-gradient">tốt hơn</span></>}
+            sub="Bộ công cụ AI giúp bạn hiểu và chăm sóc từng chiếc lá."
+          />
+
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((f) => {
               const Icon = f.icon;
               return (
                 <div
                   key={f.title}
-                  className="group anim-fade-up relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur transition-all duration-200 hover:-translate-y-1.5 hover:border-brand-400/40 hover:bg-white/[0.06]"
-                  style={{ animationDelay: `${idx * 0.08}s` }}
+                  className="lift group rounded-2xl border border-border-subtle bg-base p-6"
                 >
-                  <span className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-500/0 blur-2xl transition-all duration-300 group-hover:bg-brand-500/25" />
-                  <span className="icon-tile relative flex h-12 w-12 items-center justify-center rounded-2xl shadow-[0_8px_24px_rgba(34,197,94,0.45)]">
+                  <span className="icon-tile flex h-12 w-12 items-center justify-center rounded-2xl">
                     <Icon className="h-6 w-6" />
                   </span>
                   <h3 className="mt-4 font-semibold">{f.title}</h3>
-                  <p className="mt-1.5 text-sm text-white/55">{f.desc}</p>
+                  <p className="mt-1.5 text-sm text-content-secondary">{f.desc}</p>
                 </div>
               );
             })}
           </div>
+        </div>
+      </section>
 
-          {/* How it works */}
-          <div className="mt-24 text-center">
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Cách hoạt động</h2>
-          </div>
+      {/* ── How it works — subtle background for clear separation ─────────── */}
+      <section className="bg-subtle">
+        <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+          <SectionHead eyebrow="Quy trình" title="Chỉ 3 bước đơn giản" />
+
           <div className="relative mt-14 grid gap-10 sm:grid-cols-3">
-            <span className="pointer-events-none absolute left-[16%] right-[16%] top-8 hidden h-px bg-gradient-to-r from-transparent via-brand-400/60 to-transparent sm:block" />
-            {STEPS.map((s, idx) => (
-              <div
-                key={s.n}
-                className="anim-fade-up relative text-center"
-                style={{ animationDelay: `${idx * 0.1}s` }}
-              >
-                <span className="icon-tile mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-xl font-extrabold shadow-[0_10px_30px_rgba(34,197,94,0.5)] ring-4 ring-white/5">
+            <span className="pointer-events-none absolute left-[16%] right-[16%] top-8 hidden h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent sm:block" />
+            {STEPS.map((s) => (
+              <div key={s.n} className="relative text-center">
+                <span className="icon-tile mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-xl font-extrabold ring-4 ring-base">
                   {s.n}
                 </span>
                 <h3 className="mt-5 text-lg font-semibold">{s.title}</h3>
-                <p className="mt-1 text-sm text-white/55">{s.desc}</p>
+                <p className="mt-1.5 text-sm text-content-secondary">{s.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="px-4 pb-20 sm:px-6 lg:px-8">
+      {/* ── CTA — brand gradient, the strong closing note ────────────────── */}
+      <section className="bg-base px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
         <div
-          className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl px-6 py-14 text-center text-white lg:py-20"
+          className="relative mx-auto max-w-5xl overflow-hidden rounded-3xl px-6 py-14 text-center text-white lg:py-20"
           style={{ backgroundImage: 'var(--grad-brand)' }}
         >
           <span className="anim-blob pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/15 blur-2xl" />
@@ -116,13 +172,16 @@ export function LandingScreen() {
             className="anim-blob pointer-events-none absolute -bottom-12 -left-8 h-48 w-48 rounded-full bg-black/10 blur-2xl"
             style={{ animationDelay: '5s' }}
           />
-          <h2 className="relative text-3xl font-bold tracking-tight lg:text-4xl">
+          <span className="relative inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur">
+            <Leaf className="h-3.5 w-3.5" /> Miễn phí bắt đầu
+          </span>
+          <h2 className="relative mt-4 text-3xl font-bold tracking-tight lg:text-4xl">
             Sẵn sàng chăm cây cùng AI?
           </h2>
           <p className="relative mx-auto mt-3 max-w-md text-brand-50">
             Tạo tài khoản miễn phí và bắt đầu quét cây đầu tiên của bạn.
           </p>
-          <div className="relative mt-7 flex flex-wrap justify-center gap-3">
+          <div className="relative mt-8 flex flex-wrap justify-center gap-3">
             <Link
               to="/register"
               className="btn bg-white px-6 text-base font-semibold text-brand-700 hover:opacity-90"
@@ -133,7 +192,7 @@ export function LandingScreen() {
               to="/scan"
               className="btn border border-white/50 px-6 text-base text-white hover:bg-white/10"
             >
-              Thử quét ngay
+              Thử quét ngay <ArrowRight className="h-5 w-5" />
             </Link>
           </div>
         </div>
