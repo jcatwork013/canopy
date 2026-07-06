@@ -46,6 +46,7 @@ export function ChatPanel({
   imageBase64,
   mimeType,
   plantName,
+  memory,
   seedQuestions = [],
   intro = `Hỏi ${AI_NAME} về tình trạng cây, cách chữa trị và chăm sóc.`,
   heightClass = 'max-h-96',
@@ -55,6 +56,9 @@ export function ChatPanel({
   mimeType?: string;
   /** Name of the plant being discussed — shown in the context bar. */
   plantName?: string;
+  /** Prior check-in history for this exact plant, injected as AI context so the
+   *  assistant "remembers" past checks. Built via journal.buildMemory(). */
+  memory?: string;
   seedQuestions?: string[];
   intro?: string;
   /** Scroll region height (Tailwind class). Larger for full-screen chat. */
@@ -127,8 +131,14 @@ export function ChatPanel({
     setPending(true);
     setError('');
     try {
+      // Prepend the plant's history as a leading context turn (not shown in the
+      // UI) so the model answers with memory of past check-ins.
+      const convo = next.map(({ role, content }) => ({ role, content }));
+      const payloadMsgs = memory
+        ? [{ role: 'user' as const, content: memory }, ...convo]
+        : convo;
       const res = await api.ai.chat({
-        messages: next.map(({ role, content }) => ({ role, content })),
+        messages: payloadMsgs,
         ...(img ? { image_base64: img.base64, mime_type: img.mime } : {}),
       });
       if (imageBase64 && img?.base64 === imageBase64) seedImageUsed.current = true;
@@ -311,7 +321,7 @@ export function ChatPanel({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Nhập câu hỏi…"
-          className="h-10 flex-1 rounded-lg border border-border-subtle bg-input px-3 text-sm text-content placeholder:text-content-tertiary focus-visible:border-brand-500 focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)]"
+          className="h-11 flex-1 rounded-lg border border-border-subtle bg-input px-3 text-base text-content placeholder:text-content-tertiary focus-visible:border-brand-500 focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)]"
         />
         <Button type="submit" size="icon" disabled={pending || (!input.trim() && !attach)} aria-label="Gửi">
           <ArrowRight className="h-5 w-5" />

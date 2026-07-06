@@ -11,6 +11,11 @@
   body,
   #root {
     height: 100%;
+    /* Kill horizontal scroll at every level. `clip` (not `hidden`) does NOT
+       create a scroll container, so the sticky header keeps working. Body alone
+       isn't enough — iOS scrolls the html/viewport level, so clip here too. */
+    max-width: 100%;
+    overflow-x: clip;
   }
   body {
     margin: 0;
@@ -23,6 +28,9 @@
     text-rendering: optimizeLegibility;
     /* Prevent overscroll bounce revealing browser chrome — app feel. */
     overscroll-behavior-y: none;
+    /* Never let a stray wide element trigger the browser's pinch/zoom-out.
+       `clip` (not `hidden`) keeps position:sticky on the header working. */
+    overflow-x: clip;
   }
   /* Disable text selection on interactive chrome for an app-like feel. */
   button,
@@ -291,29 +299,29 @@
   .dot-typing {
     animation: none;
   }
+}
 
-  /* Scan effect — a brand light sweeping over the captured image. */
-  .scan-line {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      var(--color-brand-400),
-      transparent
-    );
-    box-shadow: 0 0 16px 3px rgba(34, 197, 94, 0.55);
-    animation: scan-sweep 1.8s ease-in-out infinite alternate;
-  }
-  .scan-grid {
-    background-image:
-      linear-gradient(rgba(34, 197, 94, 0.18) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(34, 197, 94, 0.18) 1px, transparent 1px);
-    background-size: 22px 22px;
-    animation: scan-pulse 1.8s ease-in-out infinite;
-  }
+/* Scan effect — a brand light sweeping over the captured image. */
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-brand-400),
+    transparent
+  );
+  box-shadow: 0 0 16px 3px rgba(34, 197, 94, 0.55);
+  animation: scan-sweep 1.8s ease-in-out infinite alternate;
+}
+.scan-grid {
+  background-image:
+    linear-gradient(rgba(34, 197, 94, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 197, 94, 0.18) 1px, transparent 1px);
+  background-size: 22px 22px;
+  animation: scan-pulse 1.8s ease-in-out infinite;
 }
 
 @keyframes scan-sweep {
@@ -337,5 +345,46 @@
   .scan-line,
   .scan-grid {
     animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Mobile no-zoom safety net.
+ * iOS Safari auto-zooms the viewport when a focused control has font-size < 16px
+ * — the classic "màn hình bị phóng to khi bấm ô nhập". These rules are kept
+ * UNLAYERED (after every @tailwind directive) so they beat Tailwind's `text-sm`
+ * utility without needing !important. Desktop keeps its denser sizing.
+ * ------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* --- Mobile bottom tab bar ------------------------------------------------ */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-nav);
+  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  backdrop-filter: saturate(1.4) blur(14px);
+  border-top: 1px solid var(--border-subtle);
+  padding-bottom: var(--safe-bottom);
+  box-shadow: 0 -6px 24px rgba(15, 27, 20, 0.06);
+}
+:root[data-theme='dark'] .tabbar,
+.tabbar {
+  /* subtle top highlight for depth */
+}
+/* Content must clear the fixed bar on mobile; desktop hides the bar entirely
+   and relies on the top header, so this only pads below the lg breakpoint. */
+@media (max-width: 1023px) {
+  .pb-tabbar {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-4));
   }
 }

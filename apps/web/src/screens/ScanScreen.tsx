@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { CarePlanHealth, DiagnoseResult, IdentifyResult } from '@canopy/shared';
 import { AI_DISCLAIMER, ApiError } from '@canopy/shared';
 import { Button, Card, CardContent, CardHeader, CardTitle, cn } from '@/components/ui';
@@ -9,6 +9,22 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { addHistory, getHistory, removeHistory, type HistoryItem } from '@/features/scan/history';
+import {
+  addCheckIn,
+  buildMemory,
+  createPlant,
+  findBySpecies,
+  getPlant,
+  relTime,
+  resultHealth,
+  resultSpecies,
+  resultSummary,
+  resultTitle,
+  type CheckIn,
+  type Plant,
+  type ScanResult,
+} from '@/features/plants/journal';
+import { Input } from '@/components/ui/Input';
 
 const AI_NAME = 'SynapX Pro AI';
 
@@ -34,6 +50,7 @@ export function ScanScreen() {
   const [dragging, setDragging] = useState(false);
   const [chatCtx, setChatCtx] = useState<{ base64: string; mime: string } | null>(null);
   const [histThumb, setHistThumb] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [planning, setPlanning] = useState(false);
   const [planError, setPlanError] = useState('');
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -42,12 +59,37 @@ export function ScanScreen() {
   const user = useAuthStore((s) => s.user);
   const [history, setHistory] = useState<HistoryItem[]>(() => (user ? getHistory(user.id) : []));
 
+  // Plant-journal wiring: re-checking a tracked plant (?plant=<id>) links this
+  // scan to that plant and feeds its past check-ins to the AI as memory.
+  const targetPlantId = params.get('plant');
+  const [targetPlant, setTargetPlant] = useState<Plant | null>(null);
+  const [linkedPlant, setLinkedPlant] = useState<Plant | null>(null);
+  const [priorMemory, setPriorMemory] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!targetPlantId || !user) return;
+    const p = getPlant(user.id, targetPlantId);
+    if (p) {
+      setTargetPlant(p);
+      setPriorMemory(buildMemory(p));
+    }
+  }, [targetPlantId, user]);
+
   useEffect(() => {
     setFiles([]);
     setStatus('idle');
     setResult(null);
     setError('');
   }, [mode]);
+
+  // Quick-scan: arriving from the bottom tab bar's center button opens the
+  // camera straight away (best-effort — the tap is the user gesture). If the
+  // browser blocks it, the upload screen with its big Camera button is shown.
+  const quick = params.get('quick');
+  useEffect(() => {
+    if (!quick) return;
+    const t = setTimeout(() => cameraRef.current?.click(), 120);
+    return () => clearTimeout(t);
+  }, [quick]);
 
   useEffect(() => {
     const urls = files.map((f) => URL.createObjectURL(f));
@@ -91,10 +133,13 @@ export function ScanScreen() {
       toResizedBase64(files[0]!)
         .then((c) => setChatCtx(c))
         .catch(() => undefined);
-      // Save to the user's history so they can revisit without re-paying for AI.
+      // Save to the user's history so they can revisit without re-paying for AI,
+      // and — when re-checking a tracked plant — append a new check-in to it.
       if (user) {
         toResizedBase64(files[0]!, 360, 0.6)
           .then(({ base64, mime }) => {
+            const cover = `data:${mime};base64,${base64}`;
+            setCoverUrl(cover);
             const item: HistoryItem = {
               id: String(Date.now()),
               mode,
@@ -104,11 +149,16 @@ export function ScanScreen() {
                   : res.kind === 'identify'
                     ? res.data.scientific_name
                     : res.data.disease_name,
-              thumb: `data:${mime};base64,${base64}`,
+              thumb: cover,
               createdAt: Date.now(),
               result: res,
             };
             setHistory(addHistory(user.id, item));
+
+            if (targetPlant && res.data.is_plant !== false) {
+              const updated = addCheckIn(user.id, targetPlant.id, makeCheckIn(res, cover));
+              if (updated) setLinkedPlant(updated);
+            }
           })
           .catch(() => undefined);
       }
@@ -124,11 +174,15 @@ export function ScanScreen() {
     setResult(null);
     setError('');
     setHistThumb(null);
+    setCoverUrl(null);
+    setLinkedPlant(null);
   };
 
   const openHistory = (item: HistoryItem) => {
     setResult(item.result);
     setHistThumb(item.thumb);
+    setCoverUrl(item.thumb);
+    setLinkedPlant(null);
     setChatCtx(null);
     setFiles([]);
     setError('');
@@ -397,6 +451,19 @@ export function ScanScreen() {
               <DiagnoseView data={result.data} />
             )}
 
+            {result.data.is_plant !== false && user && (
+              <GardenPanel
+                user={user}
+                result={result as ScanResult}
+                cover={coverUrl ?? histThumb}
+                linked={linkedPlant}
+                onLinked={(plant, prior) => {
+                  setLinkedPlant(plant);
+                  setPriorMemory(prior);
+                }}
+              />
+            )}
+
             {result.data.is_plant !== false && (
               <div className="space-y-2">
                 <Button className="w-full" onClick={makePlan} disabled={planning}>
@@ -419,6 +486,7 @@ export function ScanScreen() {
               imageBase64={chatCtx?.base64}
               mimeType={chatCtx?.mime}
               plantName={result.data.is_plant === false ? undefined : planName(result)}
+              memory={priorMemory}
               intro="Trò chuyện với SynapX Pro AI về cây này — cách chữa trị, chăm sóc, phòng ngừa…"
               seedQuestions={
                 mode === 'diagnose'
@@ -831,4 +899,140 @@ function friendlyError(e: unknown): string {
     return e.message || 'AI gặp lỗi, vui lòng thử lại.';
   }
   return 'Không xử lý được ảnh. Vui lòng thử ảnh khác.';
+}
+
+// --- plant journal: turn a scan into a trackable check-in --------------------
+
+function makeCheckIn(res: ScanResult, cover?: string | null): CheckIn {
+  return {
+    id: `c_${Date.now()}`,
+    at: Date.now(),
+    mode: res.kind,
+    health: resultHealth(res),
+    title: resultTitle(res),
+    summary: resultSummary(res),
+    ...(cover ? { thumb: cover } : {}),
+    result: res,
+  };
+}
+
+function defaultPlantName(r: ScanResult): string {
+  if (r.kind === 'identify') return r.data.common_names?.[0] || r.data.scientific_name || 'Cây của tôi';
+  return r.data.plant || 'Cây của tôi';
+}
+
+/**
+ * "Lưu vào khu vườn" — after a scan, let the user track this plant. If a plant
+ * of the same species already exists we offer to attach the check-in to it (so
+ * the AI's memory keeps building); otherwise they name a new plant.
+ */
+function GardenPanel({
+  user,
+  result,
+  cover,
+  linked,
+  onLinked,
+}: {
+  user: { id: string };
+  result: ScanResult;
+  cover?: string | null;
+  linked: Plant | null;
+  onLinked: (plant: Plant, prior?: string) => void;
+}) {
+  const species = resultSpecies(result);
+  const [name, setName] = useState(() => defaultPlantName(result));
+  const matches = useMemo(
+    () => (linked ? [] : findBySpecies(user.id, species)),
+    [user.id, species, linked],
+  );
+
+  if (linked) {
+    return (
+      <div className="rounded-2xl border border-brand-200 bg-brand-50 p-4">
+        <p className="flex items-center gap-2 text-sm font-semibold text-brand-800">
+          <Check className="h-4 w-4" /> Đã ghi vào nhật ký cây
+        </p>
+        <div className="mt-2 flex items-center gap-3">
+          {linked.cover && (
+            <img src={linked.cover} alt="" className="h-11 w-11 shrink-0 rounded-lg object-cover" />
+          )}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{linked.name}</p>
+            <p className="text-xs text-content-secondary">
+              {linked.checkIns.length} lần kiểm tra · AI đã ghi nhớ cây này
+            </p>
+          </div>
+          <Link
+            to={`/plants/${linked.id}`}
+            className="btn btn-ghost ml-auto h-9 shrink-0 px-3 text-sm"
+          >
+            Mở nhật ký
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const createNew = () => {
+    const plant = createPlant(user.id, {
+      name,
+      ...(species ? { species } : {}),
+      ...(cover ? { cover } : {}),
+      checkIn: makeCheckIn(result, cover),
+    });
+    onLinked(plant); // brand-new plant → no prior memory yet
+  };
+  const attach = (p: Plant) => {
+    const updated = addCheckIn(user.id, p.id, makeCheckIn(result, cover));
+    if (updated) onLinked(updated, buildMemory(updated, updated.checkIns.slice(1)));
+  };
+
+  return (
+    <div className="rounded-2xl border border-border-subtle bg-surface p-4">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <Sprout className="h-4 w-4 text-brand-600" /> Lưu vào khu vườn để theo dõi
+      </p>
+      <p className="mt-0.5 text-xs text-content-tertiary">
+        Ghi lại lần kiểm tra này — lần sau AI sẽ so sánh được tình trạng cây theo thời gian.
+      </p>
+
+      {matches.length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          <p className="text-xs font-medium text-content-secondary">Đây là cây bạn đã có?</p>
+          {matches.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => attach(p)}
+              className="flex w-full items-center gap-3 rounded-xl border border-border-subtle p-2 text-left transition-colors hover:border-brand-400"
+            >
+              {p.cover ? (
+                <img src={p.cover} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
+              ) : (
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700">
+                  <Sprout className="h-4 w-4" />
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{p.name}</p>
+                <p className="text-xs text-content-tertiary">Kiểm tra lần cuối {relTime(p.updatedAt)}</p>
+              </div>
+              <span className="shrink-0 text-xs font-semibold text-brand-700">+ Ghi nhận</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Đặt tên cho cây (vd: Trầu bà bàn làm việc)"
+          className="h-11 flex-1"
+        />
+        <Button onClick={createNew} disabled={!name.trim()} className="shrink-0">
+          <Sprout className="h-4 w-4" /> Tạo cây mới
+        </Button>
+      </div>
+    </div>
+  );
 }

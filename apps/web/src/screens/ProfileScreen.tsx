@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { roleHelpers, type User } from '@canopy/shared';
-import { Camera, Check, LogOut, MapPin, Pencil, Scan, Settings, ShieldCheck, Sparkles, X } from '@/components/icons';
+import { ArrowRight, BookOpen, Camera, Check, LogOut, MapPin, Pencil, Scan, Search, Settings, ShieldCheck, Sparkles, Users, X } from '@/components/icons';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button, Card, CardContent, CardHeader, CardTitle, cn, Input } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -196,9 +196,20 @@ export function ProfileScreen() {
       </div>
 
       {/* ===== Two columns ===== */}
-      <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
+      {/* min-w-0 on both grid items: without it grid tracks default to
+          min-width:auto and refuse to shrink below their content, so a wide
+          child pushes the card past the viewport (horizontal scroll on mobile). */}
+      <div className="grid gap-4 lg:grid-cols-[340px_1fr] [&>*]:min-w-0">
         {/* Intro */}
         <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          {/* Secondary destinations — surfaced here on mobile since the top bar
+              has no menu (the bottom tab bar covers primary nav). */}
+          <div className="grid grid-cols-3 gap-2 lg:hidden">
+            <QuickLink to="/search" icon={<Search className="h-5 w-5" />} label="Tra cứu" />
+            <QuickLink to="/community" icon={<Users className="h-5 w-5" />} label="Khám phá" />
+            <QuickLink to="/guides" icon={<BookOpen className="h-5 w-5" />} label="Cẩm nang" />
+          </div>
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle>Giới thiệu</CardTitle>
@@ -242,11 +253,18 @@ export function ProfileScreen() {
 
         {/* Activity feed (scan history) */}
         <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Hoạt động gần đây</CardTitle>
-            <Link to="/scan" className="text-sm font-medium text-brand-600 hover:underline">
-              Quét mới
-            </Link>
+          <CardHeader>
+            {/* Inner flex-row: CardHeader itself is flex-col, so lay the title and
+                action out on one line here (avoids fighting its base direction). */}
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>Hoạt động gần đây</CardTitle>
+              <Link
+                to="/scan"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-100"
+              >
+                <Scan className="h-3.5 w-3.5" /> Quét mới
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             {history.length === 0 ? (
@@ -260,22 +278,26 @@ export function ProfileScreen() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {history.map((h) => (
                   <Link
                     key={h.id}
                     to={`/scan?mode=${h.mode}&history=${h.id}`}
-                    className="flex items-center gap-3 rounded-xl border border-border-subtle p-3 transition-colors hover:border-brand-400 hover:bg-subtle"
+                    className="group flex items-center gap-3 rounded-xl border border-border-subtle p-2.5 transition-colors hover:border-brand-400 hover:bg-subtle"
                   >
-                    <img src={h.thumb} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+                    <img src={h.thumb} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{h.title}</p>
-                      <p className="text-xs text-content-tertiary">
-                        {h.mode === 'diagnose' ? '🩺 Chẩn đoán bệnh' : '🌿 Nhận diện cây'} ·{' '}
+                      <p className="truncate font-semibold leading-tight">{h.title}</p>
+                      <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-content-tertiary">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-subtle px-1.5 py-0.5 font-medium">
+                          {h.mode === 'diagnose' ? '🩺 Chẩn đoán' : '🌿 Nhận diện'}
+                        </span>
                         {new Date(h.createdAt).toLocaleDateString('vi-VN')}
                       </p>
                     </div>
-                    <span className="text-sm font-medium text-brand-600">Xem lại</span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-content-tertiary transition-colors group-hover:bg-brand-100 group-hover:text-brand-700">
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -326,6 +348,20 @@ function RoleCtaCard({ user }: { user: User }) {
         </Link>
       </CardContent>
     </Card>
+  );
+}
+
+function QuickLink({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="flex flex-col items-center gap-1.5 rounded-2xl border border-border-subtle bg-surface p-3 text-center shadow-sm transition-colors hover:border-brand-400 active:scale-[0.98]"
+    >
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+        {icon}
+      </span>
+      <span className="text-xs font-semibold">{label}</span>
+    </Link>
   );
 }
 

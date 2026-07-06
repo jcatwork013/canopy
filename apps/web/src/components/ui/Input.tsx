@@ -8,7 +8,8 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
     <input
       ref={ref}
       className={cn(
-        'h-10 w-full rounded-md border border-border-subtle bg-input px-3 text-sm text-content',
+        // 16px on mobile so iOS never zoom-jumps on focus; compact 14px on desktop.
+        'h-10 w-full rounded-md border border-border-subtle bg-input px-3 text-base text-content md:text-sm',
         'placeholder:text-content-tertiary transition-colors',
         'focus-visible:border-brand-500 focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)]',
         'disabled:cursor-not-allowed disabled:opacity-50',
