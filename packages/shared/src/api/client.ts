@@ -21,12 +21,17 @@ import type {
   CarePlan,
   CarePlanStep,
   CarePlanStatus,
+  CreateGardenPlantRequest,
   DiagnoseResult,
+  GardenCheckInInput,
+  GardenPlant,
   GenerateCarePlanRequest,
   IdentifyResult,
   Listing,
+  ProfilePrefsDTO,
+  ScanHistoryInput,
+  ScanHistoryItem,
   TreatmentPlan,
-  UserPlant,
 } from '../types/domain';
 import type { GuideArticle, SiteConfig, SystemStatus } from '../types/system';
 import { HttpClient } from './http';
@@ -104,17 +109,6 @@ export class CanopyClient {
       }),
   };
 
-  // --- Plants --------------------------------------------------------------
-  plants = {
-    list: () => this.http.request<UserPlant[]>('/plants'),
-    get: (id: string) => this.http.request<UserPlant>(`/plants/${id}`),
-    create: (body: Partial<UserPlant>) =>
-      this.http.request<UserPlant>('/plants', { method: 'POST', body }),
-    update: (id: string, body: Partial<UserPlant>) =>
-      this.http.request<UserPlant>(`/plants/${id}`, { method: 'PUT', body }),
-    remove: (id: string) => this.http.request<void>(`/plants/${id}`, { method: 'DELETE' }),
-  };
-
   // --- AI ------------------------------------------------------------------
   ai = {
     identify: (body: { image_base64: string; mime_type: string }) =>
@@ -146,6 +140,35 @@ export class CanopyClient {
         method: 'PATCH',
         body: { done },
       }),
+  };
+
+  // --- Garden journal (Khu vườn) — tracked plants + check-in timeline -------
+  plants = {
+    list: () => this.http.request<GardenPlant[]>('/plants'),
+    get: (id: string) => this.http.request<GardenPlant>(`/plants/${id}`),
+    create: (body: CreateGardenPlantRequest) =>
+      this.http.request<GardenPlant>('/plants', { method: 'POST', body }),
+    /** Append a check-in to an existing plant (a re-check). */
+    addCheckIn: (id: string, body: GardenCheckInInput) =>
+      this.http.request<GardenPlant>(`/plants/${id}/checkins`, { method: 'POST', body }),
+    rename: (id: string, name: string) =>
+      this.http.request<GardenPlant>(`/plants/${id}`, { method: 'PATCH', body: { name } }),
+    remove: (id: string) => this.http.request<void>(`/plants/${id}`, { method: 'DELETE' }),
+  };
+
+  // --- Scan history (lịch sử quét) -----------------------------------------
+  scans = {
+    list: () => this.http.request<ScanHistoryItem[]>('/scans'),
+    add: (body: ScanHistoryInput) =>
+      this.http.request<ScanHistoryItem>('/scans', { method: 'POST', body }),
+    remove: (id: string) => this.http.request<void>(`/scans/${id}`, { method: 'DELETE' }),
+  };
+
+  // --- Profile preferences (tên hiển thị, avatar, ảnh bìa) -----------------
+  profile = {
+    get: () => this.http.request<ProfilePrefsDTO>('/profile'),
+    update: (body: ProfilePrefsDTO) =>
+      this.http.request<ProfilePrefsDTO>('/profile', { method: 'PUT', body }),
   };
 
   // --- KYC / role applications --------------------------------------------

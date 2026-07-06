@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { CarePlanHealth, DiagnoseResult, IdentifyResult } from '@canopy/shared';
 import { AI_DISCLAIMER, ApiError } from '@canopy/shared';
@@ -57,7 +57,14 @@ export function ScanScreen() {
   const galleryRef = useRef<HTMLInputElement>(null);
 
   const user = useAuthStore((s) => s.user);
-  const [history, setHistory] = useState<HistoryItem[]>(() => (user ? getHistory(user.id) : []));
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  useEffect(() => {
+    let alive = true;
+    getHistory().then((h) => alive && setHistory(h));
+    return () => {
+      alive = false;
+    };
+  }, [user]);
 
   // Plant-journal wiring: re-checking a tracked plant (?plant=<id>) links this
   // scan to that plant and feeds its past check-ins to the AI as memory.
@@ -66,13 +73,18 @@ export function ScanScreen() {
   const [linkedPlant, setLinkedPlant] = useState<Plant | null>(null);
   const [priorMemory, setPriorMemory] = useState<string | undefined>(undefined);
   useEffect(() => {
-    if (!targetPlantId || !user) return;
-    const p = getPlant(user.id, targetPlantId);
-    if (p) {
-      setTargetPlant(p);
-      setPriorMemory(buildMemory(p));
-    }
-  }, [targetPlantId, user]);
+    if (!targetPlantId) return;
+    let alive = true;
+    getPlant(targetPlantId).then((p) => {
+      if (alive && p) {
+        setTargetPlant(p);
+        setPriorMemory(buildMemory(p));
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [targetPlantId]);
 
   useEffect(() => {
     setFiles([]);
@@ -101,12 +113,18 @@ export function ScanScreen() {
   const histId = params.get('history');
   useEffect(() => {
     if (!histId || !user) return;
-    const item = getHistory(user.id).find((h) => h.id === histId);
-    if (item) {
-      setResult(item.result);
-      setHistThumb(item.thumb);
-      setStatus('done');
-    }
+    let alive = true;
+    getHistory().then((list) => {
+      const item = list.find((h) => h.id === histId);
+      if (alive && item) {
+        setResult(item.result);
+        setHistThumb(item.thumb);
+        setStatus('done');
+      }
+    });
+    return () => {
+      alive = false;
+    };
   }, [histId, user]);
 
   const addFiles = (list: FileList | null) => {
@@ -140,24 +158,18 @@ export function ScanScreen() {
           .then(({ base64, mime }) => {
             const cover = `data:${mime};base64,${base64}`;
             setCoverUrl(cover);
-            const item: HistoryItem = {
-              id: String(Date.now()),
-              mode,
-              title:
-                res.data.is_plant === false
-                  ? 'Không phải cây'
-                  : res.kind === 'identify'
-                    ? res.data.scientific_name
-                    : res.data.disease_name,
-              thumb: cover,
-              createdAt: Date.now(),
-              result: res,
-            };
-            setHistory(addHistory(user.id, item));
+            const title =
+              res.data.is_plant === false
+                ? 'Không phải cây'
+                : res.kind === 'identify'
+                  ? res.data.scientific_name
+                  : res.data.disease_name;
+            addHistory({ mode, title, thumb: cover, result: res }).then(setHistory);
 
             if (targetPlant && res.data.is_plant !== false) {
-              const updated = addCheckIn(user.id, targetPlant.id, makeCheckIn(res, cover));
-              if (updated) setLinkedPlant(updated);
+              addCheckIn(targetPlant.id, makeCheckIn(res, cover)).then((updated) => {
+                if (updated) setLinkedPlant(updated);
+              });
             }
           })
           .catch(() => undefined);
@@ -191,7 +203,7 @@ export function ScanScreen() {
   };
 
   const deleteHistory = (id: string) => {
-    if (user) setHistory(removeHistory(user.id, id));
+    removeHistory(id).then(setHistory);
   };
 
   // Generate + save a care roadmap from the current result, then open the Care tab.
@@ -260,7 +272,7 @@ export function ScanScreen() {
       />
 
       {files.length === 0 && status !== 'done' ? (
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
           {/* Upload zone — spans wider */}
           <div
             onDragOver={(e) => {
@@ -429,7 +441,7 @@ export function ScanScreen() {
         </Card>
       ) : result ? (
         // Result — desktop: image left, info right; both animate in.
-        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start [&>*]:min-w-0">
           <div className="anim-fade overflow-hidden rounded-2xl border border-border-subtle bg-[#0b0f0d] lg:sticky lg:top-24">
             <img
               src={previews[0] ?? histThumb ?? ''}
@@ -453,7 +465,6 @@ export function ScanScreen() {
 
             {result.data.is_plant !== false && user && (
               <GardenPanel
-                user={user}
                 result={result as ScanResult}
                 cover={coverUrl ?? histThumb}
                 linked={linkedPlant}
@@ -927,13 +938,11 @@ function defaultPlantName(r: ScanResult): string {
  * the AI's memory keeps building); otherwise they name a new plant.
  */
 function GardenPanel({
-  user,
   result,
   cover,
   linked,
   onLinked,
 }: {
-  user: { id: string };
   result: ScanResult;
   cover?: string | null;
   linked: Plant | null;
@@ -941,10 +950,18 @@ function GardenPanel({
 }) {
   const species = resultSpecies(result);
   const [name, setName] = useState(() => defaultPlantName(result));
-  const matches = useMemo(
-    () => (linked ? [] : findBySpecies(user.id, species)),
-    [user.id, species, linked],
-  );
+  const [matches, setMatches] = useState<Plant[]>([]);
+  useEffect(() => {
+    if (linked) {
+      setMatches([]);
+      return;
+    }
+    let alive = true;
+    findBySpecies(species).then((m) => alive && setMatches(m));
+    return () => {
+      alive = false;
+    };
+  }, [species, linked]);
 
   if (linked) {
     return (
@@ -973,8 +990,8 @@ function GardenPanel({
     );
   }
 
-  const createNew = () => {
-    const plant = createPlant(user.id, {
+  const createNew = async () => {
+    const plant = await createPlant({
       name,
       ...(species ? { species } : {}),
       ...(cover ? { cover } : {}),
@@ -982,8 +999,8 @@ function GardenPanel({
     });
     onLinked(plant); // brand-new plant → no prior memory yet
   };
-  const attach = (p: Plant) => {
-    const updated = addCheckIn(user.id, p.id, makeCheckIn(result, cover));
+  const attach = async (p: Plant) => {
+    const updated = await addCheckIn(p.id, makeCheckIn(result, cover));
     if (updated) onLinked(updated, buildMemory(updated, updated.checkIns.slice(1)));
   };
 

@@ -197,6 +197,73 @@ export interface Listing {
   created_at: string;
 }
 
+// --- Garden journal (Khu vườn / nhật ký cây) -------------------------------
+export type GardenHealth = 'ok' | 'warning' | 'disease' | 'unknown';
+
+export interface GardenCheckIn {
+  id: string;
+  at: string; // ISO timestamp
+  mode: 'identify' | 'diagnose';
+  health: GardenHealth;
+  title: string;
+  summary: string;
+  note?: string | null;
+  thumb?: string | null;
+  result?: unknown;
+}
+
+export interface GardenPlant {
+  id: string;
+  user_id: string;
+  name: string;
+  species?: string | null;
+  cover?: string | null;
+  health: GardenHealth;
+  created_at: string;
+  updated_at: string;
+  check_ins: GardenCheckIn[];
+}
+
+export interface GardenCheckInInput {
+  mode: 'identify' | 'diagnose';
+  health: GardenHealth;
+  title: string;
+  summary: string;
+  note?: string;
+  thumb?: string;
+  result?: unknown;
+}
+
+export interface CreateGardenPlantRequest {
+  name: string;
+  species?: string;
+  cover?: string;
+  check_in: GardenCheckInInput;
+}
+
+// --- Scan history (lịch sử quét) -------------------------------------------
+export interface ScanHistoryItem {
+  id: string;
+  mode: 'identify' | 'diagnose';
+  title: string;
+  thumb?: string | null;
+  result?: unknown;
+  created_at: string;
+}
+export interface ScanHistoryInput {
+  mode: 'identify' | 'diagnose';
+  title: string;
+  thumb?: string;
+  result?: unknown;
+}
+
+// --- Profile preferences (tên hiển thị, avatar, ảnh bìa) -------------------
+export interface ProfilePrefsDTO {
+  name?: string | null;
+  avatar?: string | null;
+  banner?: string | null;
+}
+
 /** AI results are advisory — surface this disclaimer wherever AI output shows. */
 export const AI_DISCLAIMER =
   'Kết quả AI mang tính tham khảo, không thay thế ý kiến chuyên gia thực vật.';

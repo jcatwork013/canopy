@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Check, Pencil, Scan, Sprout, X } from '@/components/icons';
 import { Button, Input, cn } from '@/components/ui';
 import { ChatPanel } from '@/components/ChatPanel';
-import { useAuthStore } from '@/store/auth';
 import {
   buildMemory,
   fmtDate,
@@ -32,18 +31,22 @@ function splitDataUrl(url?: string): { base64: string; mime: string } | null {
 
 export function PlantDetailScreen() {
   const { id = '' } = useParams();
-  const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const [plant, setPlant] = useState<Plant | null | undefined>(undefined);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
 
   useEffect(() => {
-    if (!user) return;
-    const p = getPlant(user.id, id);
-    setPlant(p ?? null);
-    if (p) setName(p.name);
-  }, [user, id]);
+    let alive = true;
+    getPlant(id).then((p) => {
+      if (!alive) return;
+      setPlant(p ?? null);
+      if (p) setName(p.name);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [id]);
 
   const cover = useMemo(() => splitDataUrl(plant?.cover), [plant?.cover]);
   const memory = useMemo(() => (plant ? buildMemory(plant) : undefined), [plant]);
@@ -62,16 +65,14 @@ export function PlantDetailScreen() {
 
   const h = HEALTH[plant.health] ?? HEALTH.unknown;
 
-  const saveName = () => {
-    if (!user) return;
-    const updated = renamePlant(user.id, plant.id, name);
+  const saveName = async () => {
+    const updated = await renamePlant(plant.id, name);
     if (updated) setPlant(updated);
     setEditing(false);
   };
-  const del = () => {
-    if (!user) return;
+  const del = async () => {
     if (!confirm('Xoá cây này khỏi khu vườn? Toàn bộ lịch sử kiểm tra sẽ mất.')) return;
-    removePlant(user.id, plant.id);
+    await removePlant(plant.id);
     navigate('/plants');
   };
 

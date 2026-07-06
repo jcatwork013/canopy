@@ -1,4 +1,10 @@
-import type { DiagnoseResult, IdentifyResult } from '@canopy/shared';
+import type { DiagnoseResult, IdentifyResult, ScanHistoryItem } from '@canopy/shared';
+import { api } from '@/lib/api';
+
+/**
+ * Recent scan history (lịch sử quét). Persisted on the backend so past results
+ * can be reopened from any device without re-paying for AI.
+ */
 
 export type ScanResult =
   | { kind: 'identify'; data: IdentifyResult }
@@ -8,39 +14,51 @@ export interface HistoryItem {
   id: string;
   mode: 'identify' | 'diagnose';
   title: string;
-  thumb: string; // small data URL
+  thumb: string;
   createdAt: number;
   result: ScanResult;
 }
 
-const MAX = 20;
-const key = (uid: string) => `canopy-scan-history-${uid}`;
+function mapItem(it: ScanHistoryItem): HistoryItem {
+  return {
+    id: it.id,
+    mode: it.mode,
+    title: it.title,
+    thumb: it.thumb ?? '',
+    createdAt: Date.parse(it.created_at),
+    result: it.result as ScanResult,
+  };
+}
 
-export function getHistory(uid: string): HistoryItem[] {
+export async function getHistory(): Promise<HistoryItem[]> {
   try {
-    const raw = localStorage.getItem(key(uid));
-    return raw ? (JSON.parse(raw) as HistoryItem[]) : [];
+    return (await api.scans.list()).map(mapItem);
   } catch {
     return [];
   }
 }
 
-export function addHistory(uid: string, item: HistoryItem): HistoryItem[] {
-  const list = [item, ...getHistory(uid).filter((h) => h.id !== item.id)].slice(0, MAX);
+/** Save a scan, then return the refreshed list. */
+export async function addHistory(input: {
+  mode: 'identify' | 'diagnose';
+  title: string;
+  thumb?: string;
+  result: ScanResult;
+}): Promise<HistoryItem[]> {
   try {
-    localStorage.setItem(key(uid), JSON.stringify(list));
+    await api.scans.add({
+      mode: input.mode,
+      title: input.title,
+      ...(input.thumb ? { thumb: input.thumb } : {}),
+      result: input.result,
+    });
   } catch {
-    /* quota — drop silently */
+    /* ignore — best effort */
   }
-  return list;
+  return getHistory();
 }
 
-export function removeHistory(uid: string, id: string): HistoryItem[] {
-  const list = getHistory(uid).filter((h) => h.id !== id);
-  try {
-    localStorage.setItem(key(uid), JSON.stringify(list));
-  } catch {
-    /* ignore */
-  }
-  return list;
+export async function removeHistory(id: string): Promise<HistoryItem[]> {
+  await api.scans.remove(id).catch(() => undefined);
+  return getHistory();
 }

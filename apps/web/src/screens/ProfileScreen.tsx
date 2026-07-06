@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import { fileToResizedBase64 } from '@/lib/image';
 import { useAuthStore } from '@/store/auth';
 import { useProfileStore } from '@/store/profile';
-import { getHistory } from '@/features/scan/history';
+import { getHistory, type HistoryItem } from '@/features/scan/history';
 
 const STATUS_VI: Record<string, string> = {
   active: 'Đang hoạt động',
@@ -29,7 +29,14 @@ const fmtDate = (d?: string | null) =>
 export function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const clear = useAuthStore((s) => s.clear);
-  const history = user ? getHistory(user.id) : [];
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  useEffect(() => {
+    let alive = true;
+    getHistory().then((h) => alive && setHistory(h));
+    return () => {
+      alive = false;
+    };
+  }, [user]);
 
   const prefs = useProfileStore((s) => s.prefs);
   const loadFor = useProfileStore((s) => s.loadFor);

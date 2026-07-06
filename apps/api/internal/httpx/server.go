@@ -11,7 +11,10 @@ import (
 	"github.com/canopy/api/internal/config"
 	"github.com/canopy/api/internal/content"
 	"github.com/canopy/api/internal/kyc"
+	"github.com/canopy/api/internal/plants"
+	"github.com/canopy/api/internal/profile"
 	"github.com/canopy/api/internal/respond"
+	"github.com/canopy/api/internal/scans"
 	"github.com/canopy/api/internal/sysconfig"
 	"github.com/canopy/api/internal/system"
 	"github.com/gin-gonic/gin"
@@ -28,8 +31,11 @@ type Deps struct {
 	AuthMW       *auth.Middleware
 	AdminHandler *admin.Handler
 	AIHandler    *ai.Handler
-	CareHandler  *care.Handler
-	KYCHandler   *kyc.Handler
+	CareHandler    *care.Handler
+	PlantsHandler  *plants.Handler
+	ScansHandler   *scans.Handler
+	ProfileHandler *profile.Handler
+	KYCHandler     *kyc.Handler
 	Sysconfig    *sysconfig.Service
 	Content      *content.Service
 }
@@ -98,6 +104,21 @@ func (s *Server) routes() {
 	careGrp := v1.Group("/care")
 	careGrp.Use(s.deps.AuthMW.Required())
 	s.deps.CareHandler.Register(careGrp)
+
+	// plants (auth required) — garden journal (Khu vườn) + check-in timeline.
+	plantsGrp := v1.Group("/plants")
+	plantsGrp.Use(s.deps.AuthMW.Required())
+	s.deps.PlantsHandler.Register(plantsGrp)
+
+	// scans (auth required) — recent scan history (lịch sử quét).
+	scansGrp := v1.Group("/scans")
+	scansGrp.Use(s.deps.AuthMW.Required())
+	s.deps.ScansHandler.Register(scansGrp)
+
+	// profile (auth required) — display name + avatar + banner.
+	profileGrp := v1.Group("/profile")
+	profileGrp.Use(s.deps.AuthMW.Required())
+	s.deps.ProfileHandler.Register(profileGrp)
 
 	// kyc (auth required) — identity verification + role applications.
 	kycGrp := v1.Group("/kyc")

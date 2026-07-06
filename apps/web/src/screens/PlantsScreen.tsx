@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Check, Scan, Sprout } from '@/components/icons';
+import { AlertTriangle, Check, Scan, Spinner, Sprout } from '@/components/icons';
 import { cn } from '@/components/ui';
 import { useAuthStore } from '@/store/auth';
 import { getPlants, relTime, type Plant, type PlantHealth } from '@/features/plants/journal';
@@ -14,9 +14,15 @@ const HEALTH: Record<PlantHealth, { label: string; chip: string }> = {
 
 export function PlantsScreen() {
   const user = useAuthStore((s) => s.user);
-  const [plants, setPlants] = useState<Plant[]>([]);
+  const [plants, setPlants] = useState<Plant[] | null>(null);
   useEffect(() => {
-    if (user) setPlants(getPlants(user.id));
+    let alive = true;
+    getPlants()
+      .then((p) => alive && setPlants(p))
+      .catch(() => alive && setPlants([]));
+    return () => {
+      alive = false;
+    };
   }, [user]);
 
   return (
@@ -33,7 +39,11 @@ export function PlantsScreen() {
         </Link>
       </div>
 
-      {plants.length === 0 ? (
+      {plants === null ? (
+        <div className="flex items-center justify-center gap-2 py-16 text-sm text-content-tertiary">
+          <Spinner className="h-5 w-5 animate-spin" /> Đang tải khu vườn…
+        </div>
+      ) : plants.length === 0 ? (
         <EmptyState />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
